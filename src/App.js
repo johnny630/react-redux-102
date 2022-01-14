@@ -1,36 +1,43 @@
-import React, { useEffect } from 'react';
+import React, { Fragment, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
 import Cart from './components/Cart/Cart';
 import Layout from './components/Layout/Layout';
 import Products from './components/Shop/Products';
+import { uiActions } from './store/ui-slice';
+import Notification from './components/UI/Notification';
+
+let initial = true;
 
 function App() {
   const dispatch = useDispatch();
   const showCart = useSelector((state) => state.ui.cartIsVisible);
   const cart = useSelector((state) => state.cart);
+  const notification = useSelector((state) => state.ui.notification);
 
   useEffect(() => {
     const sendCartData = async () => {
       dispatch(
-        uiActions.showNitification({
+        uiActions.showNotification({
           status: 'pending',
           title: 'Sending...',
           message: 'Sending cart data',
         })
       );
-      const response = await fetch('URL', {
-        method:
-          'https://react-db-fcd86-default-rtdb.asia-southeast1.firebasedatabase.app/cart.json',
-        body: JSON.stringify(cart),
-      });
+      const response = await fetch(
+        'https://react-db-fcd86-default-rtdb.asia-southeast1.firebasedatabase.app/cart.json',
+        {
+          method: 'PUT',
+          body: JSON.stringify(cart),
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Sending data failed');
       }
 
       dispatch(
-        uiActions.showNitification({
+        uiActions.showNotification({
           status: 'success',
           title: 'Success!',
           message: 'Send cart data successfully',
@@ -38,22 +45,36 @@ function App() {
       );
     };
 
+    if (initial) {
+      initial = false;
+      return;
+    }
+
     sendCartData().catch((error) => {
       dispatch(
-        uiActions.showNitification({
-          statue: 'error',
+        uiActions.showNotification({
+          status: 'error',
           title: 'Error!',
           message: 'Send cart data failed',
         })
       );
     });
-  }, [cart]);
+  }, [cart, dispatch]);
 
   return (
-    <Layout>
-      {showCart && <Cart />}
-      <Products />
-    </Layout>
+    <Fragment>
+      {notification && (
+        <Notification
+          status={notification.status}
+          title={notification.title}
+          message={notification.message}
+        />
+      )}
+      <Layout>
+        {showCart && <Cart />}
+        <Products />
+      </Layout>
+    </Fragment>
   );
 }
 
